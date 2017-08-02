@@ -3,6 +3,7 @@ import { StyleSheet, View, TextInput, ScrollView } from 'react-native';
 import { Container, Header, Title, Content, Footer, FooterTab, Button, Left, Right, Body, Icon, Text, Spinner, Item, Input, List, ListItem} from 'native-base';
 import { Font } from 'expo';
 import axios from 'axios';
+import key from './key.json';
 
 
 export default class App extends React.Component {
@@ -41,7 +42,7 @@ export default class App extends React.Component {
   getPlacesList = () => {
     if(this.state.placeInput.trim() != ''){
       this.setState({ findingResults : true, foundPlaces: false });
-      query = 'https://maps.googleapis.com/maps/api/place/textsearch/json?query=' + this.state.placeInput + '&key=AIzaSyBhv0g9r-mtRqAEywP8bF8HSXvO0P9Wfro';
+      query = 'https://maps.googleapis.com/maps/api/place/textsearch/json?query=' + this.state.placeInput + '&key=' + key.value;
       axios.get(query)
         .then(response => {
           console.log(response.data.results[0].geometry)
@@ -50,7 +51,7 @@ export default class App extends React.Component {
             locationLat: response.data.results[0].geometry.location.lat, 
             locationLong: response.data.results[0].geometry.location.lng  })
 
-          query = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=' + this.state.locationLat + ',' + this.state.locationLong + '&radius=500&type=restaurant&key=AIzaSyBhv0g9r-mtRqAEywP8bF8HSXvO0P9Wfro'
+          query = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=' + this.state.locationLat + ',' + this.state.locationLong + '&radius=500&type=restaurant&key=' + key.value
           axios.get(query)
             .then(response => {
               this.setState({
