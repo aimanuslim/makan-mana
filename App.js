@@ -28,6 +28,7 @@ export default class App extends React.Component {
     });
 
     this.setState({ fontLoaded: true });
+    console.log(Math.random() * 10);
   }
 
   updateText = () => {
@@ -45,7 +46,7 @@ export default class App extends React.Component {
       query = 'https://maps.googleapis.com/maps/api/place/textsearch/json?query=' + this.state.placeInput + '&key=' + key.value;
       axios.get(query)
         .then(response => {
-          console.log(response.data.results[0].geometry)
+          console.log(response.data.results)
           console.log(query)
           this.setState({ 
             locationLat: response.data.results[0].geometry.location.lat, 
@@ -107,21 +108,36 @@ export default class App extends React.Component {
     }
     return (
       <Container style={{paddingTop: 25}}>
-        <Item regular>
+        <Item regular style={{marginLeft: 10, marginRight: 10, marginTop: 5}}
+          >
           <Input 
             placeholder='Postcode' 
+            style={{borderRadius: 4}}
               />
         </Item>
-        <Item regular>
+        <Item regular style={{marginLeft: 10, marginRight: 10, marginTop: 5}}>
           <Input 
             placeholder='Area Name' 
             onChangeText={(text) => this.setPlaceQuery(text)}
+            style={{borderRadius: 4}}
           />
         </Item>
-        <Button full onPress={this.getPlacesList}>
-          <Text>Choose For Me!</Text>
-        </Button>
-        <ScrollView>
+        <View style={{
+          flexDirection: 'row', 
+          justifyContent: 'space-around', 
+          borderWidth: 0,
+          height: 80,
+          marginTop: 5
+          }
+        }>
+          <Button info style={styles.buttonStyle} onPress={this.getPlacesList}>
+            <Text>List!</Text>
+          </Button>
+          <Button primary style={styles.buttonStyle}>
+            <Text>Choose For Me!</Text>
+          </Button>
+        </View>
+        <ScrollView style={{flex: 3}}>
           {this.renderList()}
         </ScrollView>
         
@@ -144,5 +160,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  mainComponentsStyle: {
+    flex: 1
+  },
+
+  textBoxStyle: {
+    margin: 2
+  },
+
+  buttonStyle: {
+    borderRadius: 8,
+    margin: 15
   }
 });
