@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, TextInput, ScrollView } from 'react-native';
 import { Container, Header, Title, Content, Footer, FooterTab, Button, Left, Right, Body, Icon, Text, Spinner, Item, Input, List, ListItem} from 'native-base';
+import Display from './components/Display'
 import { Font } from 'expo';
 import axios from 'axios';
 import key from './key.json';
@@ -17,9 +18,11 @@ export default class App extends React.Component {
       locationLong: '',
       placeInput: '',
       foundPlaces: false,
-      findingResults: false
+      findingResults: false,
+      placeDetails: ''
 
     };
+    this.chooseRandomPlace = this.chooseRandomPlace.bind(this)  
   }
 
   async componentDidMount() {
@@ -68,6 +71,31 @@ export default class App extends React.Component {
   renderPlaces () {
     return this.state.places.map(place => <Text>{place.name}</Text>)
   }
+
+  chooseRandomPlace () {
+    this.getPlacesList();
+  }
+
+  renderCard () {
+    if(this.state.foundPlaces){
+      return (
+        <Display placeDetails={this.state.places[Math.ceil(Math.random() * this.state.places.length) - 1]}
+        />
+      );
+    } else {
+      if(this.state.findingResults){
+        return (
+          <Container style={{alignItems: 'center', justifyContent: 'center', flex: 1}}>
+            <Spinner color='blue' />
+          </Container> 
+        );  
+      } else {
+        return <View/>;
+      }
+      
+    }
+  }
+
 
   renderList () {
     if(this.state.foundPlaces){
@@ -133,12 +161,12 @@ export default class App extends React.Component {
           <Button info style={styles.buttonStyle} onPress={this.getPlacesList}>
             <Text>List!</Text>
           </Button>
-          <Button primary style={styles.buttonStyle}>
+          <Button primary onPress={this.chooseRandomPlace} style={styles.buttonStyle}>
             <Text>Choose For Me!</Text>
           </Button>
         </View>
         <ScrollView style={{flex: 3}}>
-          {this.renderList()}
+          {this.renderCard()}
         </ScrollView>
         
       </Container>
