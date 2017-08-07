@@ -4,7 +4,7 @@ import { Card, CardItem, Text, Body} from 'native-base';
 const Display = ({ placeDetails }) => {
 
   return (
-    <Card>
+    <Card style={styles.cardStyle}>
             <CardItem header>
               <Text>{placeDetails.name}</Text>
             </CardItem>
@@ -21,5 +21,11 @@ const Display = ({ placeDetails }) => {
 	 </Card> 
   );
 };
+
+const styles = {
+  cardStyle: {
+    padding: 5
+  }
+}
 
 export default Display;

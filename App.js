@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, View, TextInput, ScrollView } from 'react-native';
+import { StyleSheet, View, TextInput, ScrollView, Keyboard } from 'react-native';
 import { Container, Header, Title, Content, Footer, FooterTab, Button, Left, Right, Body, Icon, Text, Spinner, Item, Input, List, ListItem} from 'native-base';
-import Display from './components/Display'
+import Display from './components/Display';
+import GooglePlacesAutoComplete from 'react-native-google-places-autocomplete';
 import { Font } from 'expo';
 import axios from 'axios';
 import key from './key.json';
@@ -19,7 +20,8 @@ export default class App extends React.Component {
       placeInput: '',
       foundPlaces: false,
       findingResults: false,
-      placeDetails: ''
+      placeDetails: '',
+      autocompleteSuggestions: []
 
     };
     this.chooseRandomPlace = this.chooseRandomPlace.bind(this)  
@@ -30,8 +32,7 @@ export default class App extends React.Component {
       'Roboto_medium': require('./node_modules/native-base/Fonts/Roboto_medium.ttf'),
     });
 
-    this.setState({ fontLoaded: true });
-    console.log(Math.random() * 10);
+    this.setState({ fontLoaded: true, key: key.value });
   }
 
   updateText = () => {
@@ -46,7 +47,7 @@ export default class App extends React.Component {
   getPlacesList = () => {
     if(this.state.placeInput.trim() != ''){
       this.setState({ findingResults : true, foundPlaces: false });
-      query = 'https://maps.googleapis.com/maps/api/place/textsearch/json?query=' + this.state.placeInput + '&key=' + key.value;
+      query = 'https://maps.googleapis.com/maps/api/place/textsearch/json?query=' + this.state.placeInput + '&key=' + mykey.value;
       axios.get(query)
         .then(response => {
           console.log(response.data.results)
@@ -55,7 +56,7 @@ export default class App extends React.Component {
             locationLat: response.data.results[0].geometry.location.lat, 
             locationLong: response.data.results[0].geometry.location.lng  })
 
-          query = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=' + this.state.locationLat + ',' + this.state.locationLong + '&radius=500&type=restaurant&key=' + key.value
+          query = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=' + this.state.locationLat + ',' + this.state.locationLong + '&radius=500&type=restaurant&key=' + mykey.value
           axios.get(query)
             .then(response => {
               this.setState({
@@ -76,10 +77,15 @@ export default class App extends React.Component {
     this.getPlacesList();
   }
 
+  getAutoCompleteSuggestions (text) {
+      query = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?input' + text 
+
+  }
+
   renderCard () {
     if(this.state.foundPlaces){
       return (
-        <Display placeDetails={this.state.places[Math.ceil(Math.random() * this.state.places.length) - 1]}
+        <Display style={{flex: 1}} placeDetails={this.state.places[Math.ceil(Math.random() * this.state.places.length) - 1]}
         />
       );
     } else {
@@ -120,7 +126,9 @@ export default class App extends React.Component {
     }
   }
 
+
   setPlaceQuery = (placeString) => {
+    console.log(placeString)
     if(placeString.trim() != ''){
       this.setState({placeInput: placeString.split(' ').join('+')});
     }
@@ -136,13 +144,58 @@ export default class App extends React.Component {
     }
     return (
       <Container style={{paddingTop: 25}}>
-        <Item regular style={{marginLeft: 10, marginRight: 10, marginTop: 5}}
-          >
-          <Input 
-            placeholder='Postcode' 
-            style={{borderRadius: 4}}
+        key = {this.state.key};
+        <GooglePlacesAutocomplete
+                placeholder='Search'
+                minLength={2} // minimum length of text to search
+                autoFocus={false}
+                returnKeyType={'search'} // Can be left out for default return key https://facebook.github.io/react-native/docs/textinput.html#returnkeytype
+                listViewDisplayed='auto'    // true/false/undefined
+                fetchDetails={true}
+                renderDescription={(row) => row.description} // custom description render
+                onPress={(data, details = null) => { // 'details' is provided when fetchDetails = true
+                  console.log(data);
+                  console.log(details);
+                }}
+                getDefaultValue={() => {
+                  return ''; // text input default value
+                }}
+                query={{
+                  // available options: https://developers.google.com/places/web-service/autocomplete
+                  key: ,
+                  language: 'en', // language of the results
+                  types: '(cities)', // default: 'geocode'
+                }}
+                styles={{
+                  description: {
+                    fontWeight: 'bold',
+                  },
+                  predefinedPlacesDescription: {
+                    color: '#1faadb',
+                  },
+                }}
+
+                currentLocation={true} // Will add a 'Current location' button at the top of the predefined places list
+                currentLocationLabel="Current location"
+                nearbyPlacesAPI='GooglePlacesSearch' // Which API to use: GoogleReverseGeocoding or GooglePlacesSearch
+                GoogleReverseGeocodingQuery={{
+                  // available options for GoogleReverseGeocoding API : https://developers.google.com/maps/documentation/geocoding/intro
+                }}
+                GooglePlacesSearchQuery={{
+                  // available options for GooglePlacesSearch API : https://developers.google.com/places/web-service/search
+                  rankby: 'distance',
+                  types: 'food',
+                }}
+
+
+                filterReverseGeocodingByTypes={['locality', 'administrative_area_level_3']} // filter the reverse geocoding results by types - ['locality', 'administrative_area_level_3'] if you want to display only cities
+
+                predefinedPlaces={[homePlace, workPlace]}
+
+                debounce={200} // debounce the requests in ms. Set to 0 to remove debounce. By default 0ms.
+                renderLeftButton={() => <Image source={require('path/custom/left-icon')} />}
+                renderRightButton={() => <Text>Custom text after the inputg</Text>}
               />
-        </Item>
         <Item regular style={{marginLeft: 10, marginRight: 10, marginTop: 5}}>
           <Input 
             placeholder='Area Name' 
@@ -158,15 +211,16 @@ export default class App extends React.Component {
           marginTop: 5
           }
         }>
-          <Button info style={styles.buttonStyle} onPress={this.getPlacesList}>
-            <Text>List!</Text>
+          <Button info style={styles.buttonStyle}>
+            <Text>Find My location</Text>
           </Button>
-          <Button primary onPress={this.chooseRandomPlace} style={styles.buttonStyle}>
+          <Button primary onPress={(event) => { this.chooseRandomPlace(); Keyboard.dismiss();}} style={styles.buttonStyle}>
             <Text>Choose For Me!</Text>
           </Button>
         </View>
-        <ScrollView style={{flex: 3}}>
-          {this.renderCard()}
+        {this.renderCard()}
+        <ScrollView style={{flex: 1}}>
+          {this.renderList()}
         </ScrollView>
         
       </Container>
