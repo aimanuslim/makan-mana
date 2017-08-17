@@ -22,9 +22,10 @@ export default class App extends React.Component {
       placeDetails: '',
       autocompleteSuggestions: [],
       foundAutoComplete: false,
-      inputText: ''
+      inputText: '',
+      resultsUnfound: false
+
     };
-    this.chooseRandomPlace = this.chooseRandomPlace.bind(this)  
   }
 
   async componentDidMount() {
@@ -46,45 +47,58 @@ export default class App extends React.Component {
 
   getPlacesList = () => {
     if(this.state.placeInput.trim() != ''){
-      this.setState({ findingResults : true, foundPlaces: false });
+      this.setState({ findingResults : true, foundPlaces: false, resultsUnfound: false });
       query = 'https://maps.googleapis.com/maps/api/place/textsearch/json?query=' + this.state.placeInput + '&key=' + key.value;
       axios.get(query)
         .then(response => {
           console.log(response.data.results)
           console.log(query)
-          this.setState({ 
-            locationLat: response.data.results[0].geometry.location.lat, 
-            locationLong: response.data.results[0].geometry.location.lng  })
+          if(response.data.results.length !== 0){
+            this.setState({ 
+              locationLat: response.data.results[0].geometry.location.lat, 
+              locationLong: response.data.results[0].geometry.location.lng  })
 
-          query = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=' + this.state.locationLat + ',' + this.state.locationLong + '&radius=500&type=restaurant&key=' + key.value
-          axios.get(query)
-            .then(response => {
-              this.setState({
-                foundPlaces: true,
-                findingResults: false,
-                places: response.data.results
-              })
-              console.log(response.data.results.length)
-            });
+            query = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=' + this.state.locationLat + ',' + this.state.locationLong + '&radius=500&type=restaurant&key=' + key.value
+            axios.get(query)
+              .then(response => {
+                if(response.data.results.length !== 0){
+                  this.setState({
+                    foundPlaces: true,
+                    findingResults: false,
+                    places: response.data.results,
+                    randomNumber: Math.ceil(Math.random() * response.data.results.length) - 1
+
+                  }) 
+                  console.log("No results found for nearby") 
+                } else {
+                  this.setState({resultsUnfound: true})
+                }
+                console.log(response.data.results.length)
+              });
+            } else {
+              this.setState({ findingResults : false});
+              console.log("No Results found for text search")
+            }
         });
     }
   }
 
-  renderPlaces () {
-    return this.state.places.map(place => <Text>{place.name}</Text>)
-  }
 
-  chooseRandomPlace () {
-    this.getPlacesList();
-  }
-
-  renderCard () {
-    if(this.state.foundPlaces){
+  renderCard() {
+    if (this.state.foundPlaces) {
+      console.log("Random number: " + this.state.randomNumber)
+      let detail = this.state.places[this.state.randomNumber];
+      console.log("Detail: "  + detail + "Name: " + detail.name)
+      console.log("Places " + this.state.places + "END END")
       return (
-        <Display style={{flex: 1}} placeDetails={this.state.places[Math.ceil(Math.random() * this.state.places.length) - 1]}
-        />
+        <View>
+          <Text  style={{color: 'blue', fontSize: 40}}>{detail.name}</Text>
+        </View>
       );
-    } else {
+    } else if (this.state.resultsUnfound) {
+      return (<Text>Results cannot be found. Please try again</Text>);
+    }
+    else {
       if(this.state.findingResults){
         return (
           <Container style={{alignItems: 'center', justifyContent: 'center', flex: 1}}>
@@ -109,7 +123,8 @@ export default class App extends React.Component {
        }>
        </List>);
     } else {
-      if(this.state.findingResults){
+      return <View/>
+      {/*if(this.state.findingResults){
         return (
           <Container style={{alignItems: 'center', justifyContent: 'center', flex: 1}}>
             <Spinner color='blue' />
@@ -117,14 +132,14 @@ export default class App extends React.Component {
         );  
       } else {
         return <View/>;
-      }
+      }*/}
       
     }
   }
 
 
   setPlaceQuery = (placeString) => {
-    console.log(placeString);
+    console.log("Placestring: " + placeString);
     if(placeString.trim() != ''){
       this.setState({placeInput: placeString.split(' ').join('+')});
     }
@@ -146,17 +161,18 @@ export default class App extends React.Component {
             suggestionSelected: false
 
           })
-          console.log(response.data.predictions.length)
+          console.log('getSuggestions: length = ' +  response.data.predictions.length)
       })
     }
   }
 
   showSuggestions () {
+    console.log("in showSuggestions")
     if(this.state.foundAutoComplete){
       return ( 
         <List dataArray={this.state.autocompleteSuggestions}
         renderRow={(prediction) => 
-            <ListItem onPress={() => {this.setState({
+            <ListItem onPress={() => {Keyboard.dismiss(); this.setPlaceQuery(prediction.description); this.setState({
               suggestionSelected: true, 
               inputText: prediction.description
             })}}>
@@ -182,10 +198,10 @@ export default class App extends React.Component {
       );
     }
     return (
-      <Container style={{paddingTop: 25, justifyContent: 'space-between'}}>
+      <Container style={{paddingTop: 25, justifyContent: 'space-between', flex: 1}}>
         <Item regular style={{marginLeft: 10, marginRight: 10, marginTop: 5}}>
           <Input 
-            onChangeText={(text) => {this.setPlaceQuery(text); this.getSuggestions(); this.setState({inputText: text})}}
+            onChangeText={(text) => {this.setPlaceQuery(text); console.log("Input changed"); this.getSuggestions(); this.setState({inputText: text})}}
             style={{borderRadius: 4}}
             value={this.state.inputText}
           />
@@ -195,14 +211,13 @@ export default class App extends React.Component {
           flexDirection: 'row', 
           justifyContent: 'space-around', 
           borderWidth: 0,
-          height: 80,
           marginTop: 5
           }
         }>
           <Button info style={styles.buttonStyle}>
             <Text>Find My location</Text>
           </Button>
-          <Button primary onPress={(event) => { this.chooseRandomPlace(); Keyboard.dismiss();}} style={styles.buttonStyle}>
+          <Button primary onPress={(event) => { this.getPlacesList(); Keyboard.dismiss();}} style={styles.buttonStyle}>
             <Text>Choose For Me!</Text>
           </Button>
         </View>
