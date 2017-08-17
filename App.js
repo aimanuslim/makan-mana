@@ -23,8 +23,11 @@ export default class App extends React.Component {
       autocompleteSuggestions: [],
       foundAutoComplete: false,
       inputText: '',
-      resultsUnfound: false
-
+      resultsUnfound: false,
+      myLatitude: null,
+      myLongitude: null,
+      locationError: null,
+      foundMyLocation: true
     };
   }
 
@@ -166,6 +169,39 @@ export default class App extends React.Component {
     }
   }
 
+  getMyLocation () {
+    this.setState({foundMyLocation: false})
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        this.setState({
+          myLatitude: position.coords.latitude,
+          myLongitude: position.coords.longitude,
+          locationError: null,
+          foundMyLocation: true
+        });
+        url_query = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=' + position.coords.latitude + ',' + position.coords.longitude + '&rankby=distance&key=' + key.value;
+        axios.get(url_query)
+          .then((response) => {
+            if(response.data.results.length != 0){
+              let closestPlace = response.data.results[0]
+              this.setState({
+                inputText: closestPlace.name,
+                placeInput: closestPlace.name
+              })  
+            } else {
+              console.log("Unable to find place from myLocation lat and long")
+            }
+            })
+          
+        console.log("lat: " + this.state.myLatitude + " long: "  + this.state.myLongitude + " error: " + this.state.error)
+      },
+      (error) => this.setState({locationError: error.message}),
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 },
+    );
+    
+
+  }
+
   showSuggestions () {
     console.log("in showSuggestions")
     if(this.state.foundAutoComplete){
@@ -214,7 +250,7 @@ export default class App extends React.Component {
           marginTop: 5
           }
         }>
-          <Button info style={styles.buttonStyle}>
+          <Button info style={styles.buttonStyle} onPress={(event) => {this.getMyLocation()}}>
             <Text>Find My location</Text>
           </Button>
           <Button primary onPress={(event) => { this.getPlacesList(); Keyboard.dismiss();}} style={styles.buttonStyle}>
