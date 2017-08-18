@@ -49,40 +49,60 @@ export default class App extends React.Component {
   }
 
   getPlacesList = () => {
-    if(this.state.placeInput.trim() != ''){
+    if(this.state.placeInput.trim() != '' || this.state.useLongLat !== false){
       this.setState({ findingResults : true, foundPlaces: false, resultsUnfound: false });
-      query = 'https://maps.googleapis.com/maps/api/place/textsearch/json?query=' + this.state.placeInput + '&key=' + key.value;
-      axios.get(query)
-        .then(response => {
-          console.log(response.data.results)
-          console.log(query)
-          if(response.data.results.length !== 0){
-            this.setState({ 
-              locationLat: response.data.results[0].geometry.location.lat, 
-              locationLong: response.data.results[0].geometry.location.lng  })
 
-            query = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=' + this.state.locationLat + ',' + this.state.locationLong + '&radius=500&type=restaurant&key=' + key.value
-            axios.get(query)
-              .then(response => {
-                if(response.data.results.length !== 0){
-                  this.setState({
-                    foundPlaces: true,
-                    findingResults: false,
-                    places: response.data.results,
-                    randomNumber: Math.ceil(Math.random() * response.data.results.length) - 1
+      if(!this.state.useLongLat) {
+        query = 'https://maps.googleapis.com/maps/api/place/textsearch/json?query=' + this.state.placeInput + '&key=' + key.value;
+        axios.get(query)
+          .then(response => {
+            console.log(response.data.results)
+            console.log(query)
+            if(response.data.results.length !== 0){
+              this.setState({ 
+                locationLat: response.data.results[0].geometry.location.lat, 
+                locationLong: response.data.results[0].geometry.location.lng  })
 
-                  }) 
-                  console.log("No results found for nearby") 
-                } else {
-                  this.setState({resultsUnfound: true})
-                }
-                console.log(response.data.results.length)
-              });
-            } else {
-              this.setState({ findingResults : false});
-              console.log("No Results found for text search")
-            }
-        });
+              query = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=' + this.state.locationLat + ',' + this.state.locationLong + '&radius=500&type=restaurant&key=' + key.value
+              axios.get(query)
+                .then(response => {
+                  if(response.data.results.length !== 0){
+                    this.setState({
+                      foundPlaces: true,
+                      findingResults: false,
+                      places: response.data.results,
+                      randomNumber: Math.ceil(Math.random() * response.data.results.length) - 1
+
+                    }) 
+                    console.log("No results found for nearby") 
+                  } else {
+                    this.setState({resultsUnfound: true})
+                  }
+                  console.log(response.data.results.length)
+                });
+              } else {
+                this.setState({ findingResults : false});
+                console.log("No Results found for text search")
+              }
+          });
+        } else {
+          query = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=' + this.state.myLatitude + ',' + this.state.myLongitude + '&radius=500&type=restaurant&key=' + key.value
+          axios.get(query)
+            .then(response => {
+              if(response.data.results.length !== 0){
+                this.setState({
+                  foundPlaces: true,
+                  findingResults: false,
+                  places: response.data.results,
+                  randomNumber: Math.ceil(Math.random() * response.data.results.length) - 1
+                }) 
+                console.log("No results found for nearby") 
+              } else {
+                this.setState({resultsUnfound: true})
+              }
+              console.log(response.data.results.length)
+            });
+        }
     }
   }
 
@@ -148,8 +168,8 @@ export default class App extends React.Component {
       this.setState({placeInput: placeString.split(' ').join('+')});
     }
     this.setState({
-      foundAutoComplete: false
-
+      foundAutoComplete: false,
+      useLongLat: false
     })
 
   }
@@ -179,9 +199,11 @@ export default class App extends React.Component {
           myLongitude: position.coords.longitude,
           locationError: null,
           foundMyLocation: true,
-          findingLocation: false
+          findingLocation: false,
+          useLongLat: true,
+          inputText: position.coords.latitude.toString() + "," + position.coords.longitude.toString()
         });
-        url_query = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=' + position.coords.latitude + ',' + position.coords.longitude + '&rankby=distance&key=' + key.value;
+        {/*url_query = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=' + position.coords.latitude + ',' + position.coords.longitude + '&rankby=distance&key=' + key.value;
         axios.get(url_query)
           .then((response) => {
             if(response.data.results.length != 0){
@@ -193,7 +215,7 @@ export default class App extends React.Component {
             } else {
               console.log("Unable to find place from myLocation lat and long")
             }
-            })
+            })*/}
           
         console.log("lat: " + this.state.myLatitude + " long: "  + this.state.myLongitude + " error: " + this.state.error)
       },
