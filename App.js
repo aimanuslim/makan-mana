@@ -104,7 +104,8 @@ export default class App extends React.Component {
     else {
       if(this.state.findingResults){
         return (
-          <Container style={{alignItems: 'center', justifyContent: 'center', flex: 1}}>
+          <Container style={{alignItems: 'center', justifyContent: 'center', flex: 1, flexDirection: 'column'}}>
+            <Text>Finding list of locations..</Text>
             <Spinner color='blue' />
           </Container> 
         );  
@@ -170,14 +171,15 @@ export default class App extends React.Component {
   }
 
   getMyLocation () {
-    this.setState({foundMyLocation: false})
+    this.setState({foundMyLocation: false, findingLocation: true})
     navigator.geolocation.getCurrentPosition(
       (position) => {
         this.setState({
           myLatitude: position.coords.latitude,
           myLongitude: position.coords.longitude,
           locationError: null,
-          foundMyLocation: true
+          foundMyLocation: true,
+          findingLocation: false
         });
         url_query = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=' + position.coords.latitude + ',' + position.coords.longitude + '&rankby=distance&key=' + key.value;
         axios.get(url_query)
@@ -219,7 +221,20 @@ export default class App extends React.Component {
         );
 
     } else {
-      return <View/>;
+      return null;
+    }
+  }
+
+  showLoadingLocation () {
+    if(this.state.findingLocation) {
+      return (
+        <Container style={{alignItems: 'center', justifyContent: 'center', flexDirection: 'row'}}>
+          <Text> Finding your location ... </Text>
+          <Spinner color='yellow' />
+        </Container> 
+        );
+    } else {
+        return null;
     }
   }
 
@@ -243,6 +258,7 @@ export default class App extends React.Component {
           />
         </Item>
         {this.showSuggestions()}
+        {this.showLoadingLocation()}
         <View style={{
           flexDirection: 'row', 
           justifyContent: 'space-around', 
