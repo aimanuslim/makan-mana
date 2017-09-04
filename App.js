@@ -1,8 +1,10 @@
 import React from 'react';
-import { StyleSheet, View, TextInput, ScrollView, Keyboard } from 'react-native';
-import { Container, Header, Title, Content, Footer, FooterTab, Button, Left, Right, Body, Icon, Text, Spinner, Item, Input, List, ListItem, Card} from 'native-base';
+import { StyleSheet, View, TextInput, ScrollView, Keyboard, TouchableOpacity } from 'react-native';
+import { Container, Header, Title, Content, Footer, FooterTab, Button, Left, Right, Body, Icon, Text, Spinner, Item, Input, List, ListItem, Card, CardItem} from 'native-base';
 import Display from './components/Display';
+import Autocomplete from 'react-native-autocomplete-input';
 import { Font } from 'expo';
+import Expo from 'expo'
 import axios from 'axios';
 import key from './key.json';
 
@@ -61,7 +63,11 @@ export default class App extends React.Component {
             if(response.data.results.length !== 0){
               this.setState({ 
                 locationLat: response.data.results[0].geometry.location.lat, 
-                locationLong: response.data.results[0].geometry.location.lng  })
+                locationLong: response.data.results[0].geometry.location.lng,
+                myLatitude: response.data.results[0].geometry.location.lat,
+                myLongitude: response.data.results[0].geometry.location.lng
+
+                  })
 
               query = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=' + this.state.locationLat + ',' + this.state.locationLong + '&radius=500&type=restaurant&key=' + key.value
               axios.get(query)
@@ -114,13 +120,22 @@ export default class App extends React.Component {
     if (this.state.foundPlaces) {
       console.log("Random number: " + this.state.randomNumber)
       let detail = this.state.places[this.state.randomNumber];
-      let distance = findDistance(detail.geometry.location, {lat : this.state.myLatitude, lng : this.state.myLongitude});
-      console.log("Detail: "  + detail + "Name: " + detail.name)
+      var distance;
+      if(this.state.myLongitude == null){
+        distance = 0;
+      } else {
+        distance = findDistance(detail.geometry.location, {lat : this.state.myLatitude, lng : this.state.myLongitude});
+      }
+      console.log("Detail: "  + detail + " Name: " + detail.name)
       console.log("Places " + this.state.places + "END END")
       return (
-        <Card>
-          <Text  style={{color: 'blue', fontSize: 25, position: 'absolute', left: 0, top: 0}}>{detail.name}</Text>
-          <Text  style={{color: 'green', fontSize: 15, position: 'absolute', right: 0, bottom: 0}}>Absolute distance: {(distance * 1000).toFixed(2)} m</Text>
+        <Card style={{height: 30}}>
+          <CardItem>
+            <Body>
+              <Text  style={{color: 'blue', fontSize: 25}}>{detail.name}</Text>
+              <Text  style={{color: 'green', fontSize: 15}}>Absolute distance: {(distance * 1000).toFixed(2)} m</Text>
+            </Body>
+          </CardItem>
         </Card>
       );
     } else if (this.state.resultsUnfound) {
@@ -191,6 +206,7 @@ export default class App extends React.Component {
 
           })
           console.log('getSuggestions: length = ' +  response.data.predictions.length)
+          console.log('getSuggestions: data = ' +  response.data.predictions)
       })
     }
   }
@@ -268,6 +284,7 @@ export default class App extends React.Component {
 
 
   render() {
+
     if (!this.state.fontLoaded) {
       return ( 
         <Container style={{alignItems: 'center', justifyContent: 'center'}}>
@@ -275,22 +292,62 @@ export default class App extends React.Component {
         </Container> 
       );
     }
+
+    const typedText  = this.state.inputText;
+    const suggestions  = this.state.autocompleteSuggestions;
+
     return (
-      <Container style={{paddingTop: 25, justifyContent: 'space-between', flex: 1}}>
-        <Item regular style={{marginLeft: 10, marginRight: 10, marginTop: 5}}>
+
+      <Container style={{marginTop: Expo.Constants.statusBarHeight}}>
+        <Header>
+          <Left/>
+            <Body>
+              <Title>Makan mana?</Title>
+            </Body>
+          <Right/>
+        </Header>
+        {/*<Item regular style={{marginLeft: 10, marginRight: 10, marginTop: 5}}>
           <Input 
             onChangeText={(text) => {this.setPlaceQuery(text); console.log("Input changed"); this.getSuggestions(); this.setState({inputText: text})}}
             style={{borderRadius: 4}}
             value={this.state.inputText}
           />
-        </Item>
-        {this.showSuggestions()}
+        </Item>*/}
+        <View style={styles.formContainer}>
+          <Autocomplete
+            autoCapitalize="none"
+            autoCorrect={false}
+            data={suggestions}
+            defaultValue={typedText}
+            onChangeText={(text) => {this.setPlaceQuery(text); console.log("Input changed"); this.getSuggestions(); this.setState({inputText: text}); console.log("Found places: " + this.state.autocompleteSuggestions)}}
+            placeholder="Enter area name"
+            listContainerStyle={{padding: 5, zIndex: 10}}
+            containerStyle={{zIndex: 10}}
+            hideResults={this.state.suggestionSelected}
+            renderItem={( prediction ) => (
+                <TouchableOpacity onPress={() => {
+                  Keyboard.dismiss();
+                  this.setPlaceQuery(prediction.description);
+                  this.setState({
+                    suggestionSelected: true,
+                    inputText: prediction.description
+                  });
+                  }}>
+                  <Text style={styles.itemText}>
+                    {prediction.description}
+                  </Text>
+                </TouchableOpacity>
+            )}
+          />
+        </View>
+        {/*{this.showSuggestions()}*/}
         {this.showLoadingLocation()}
         <View style={{
           flexDirection: 'row', 
           justifyContent: 'space-around', 
           borderWidth: 0,
-          marginTop: 5
+          marginTop: 5,
+          zIndex: 1
           }
         }>
           <Button info style={styles.buttonStyle} onPress={(event) => {this.getMyLocation()}}>
@@ -321,6 +378,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  formContainer: {
+    backgroundColor: '#F5FCFF',
+    flex: 1,
+    paddingTop: 5,
+    margin: 10,
+    zIndex: 10
+  },
   myrow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -335,10 +399,15 @@ const styles = StyleSheet.create({
     margin: 2
   },
 
+  itemText: {
+    fontSize: 15,
+    margin: 2
+  },
   buttonStyle: {
     borderRadius: 8,
     margin: 15
   }
+
 });
 
 
@@ -347,7 +416,7 @@ function findDistance(location1, location2){
       var lat2  = location2.lat;
       var lon1  = location1.lng;
       var lon2  = location2.lng;
-      console.log("lat1: " + lat1 + "lat2: " + lat2 + "lon1: " + lon1 + "lon2: " + lon2);
+      console.log("lat1: " + lat1 + " lat2: " + lat2 + " lon1: " + lon1 + " lon2: " + lon2);
 
       var R = 6371; // Radius of the earth in km
       var dLat = deg2rad(lat2-lat1);  // deg2rad below
@@ -366,4 +435,6 @@ function findDistance(location1, location2){
 function deg2rad(deg) {
   return deg * (Math.PI/180)
 }
+
+
 
